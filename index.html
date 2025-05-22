@@ -295,6 +295,7 @@
                 this.currentItem = null;
                 this.currentSection = 'list';
                 this.currentConfigType = null; // 'api' or 'binid'
+                this.syncTimer = null; // Timer for auto-sync
                 
                 this.init();
             }
@@ -483,6 +484,9 @@
                     saveBtn.style.display = 'none';
                     cloneBtn.style.display = 'none';
                     deleteBtn.style.display = 'none';
+                    
+                    // Start auto-sync timer for list view
+                    this.startAutoSync();
                 } else {
                     // Edit view - show action buttons, hide NEW
                     backBtn.style.display = 'block';
@@ -497,9 +501,34 @@
                         cloneBtn.style.display = 'none';
                         deleteBtn.style.display = 'none';
                     }
+                    
+                    // Stop auto-sync timer when not in list view
+                    this.stopAutoSync();
                 }
                 
                 this.currentSection = section;
+            }
+
+            startAutoSync() {
+                // Clear existing timer
+                this.stopAutoSync();
+                
+                // Start new timer - sync every 10 seconds
+                this.syncTimer = setInterval(() => {
+                    if (this.currentSection === 'list') {
+                        this.autoSync();
+                    } else {
+                        // Stop timer if not in list anymore
+                        this.stopAutoSync();
+                    }
+                }, 10000); // 10 seconds
+            }
+
+            stopAutoSync() {
+                if (this.syncTimer) {
+                    clearInterval(this.syncTimer);
+                    this.syncTimer = null;
+                }
             }
 
             async autoSync() {
@@ -723,7 +752,7 @@
 
             loadItems() {
                 const stored = localStorage.getItem('retro_items');
-                this.items = stored ? JSON.parse(stored) : this.getDummyData();
+                this.items = stored ? JSON.parse(stored) : []; // Start with empty array instead of dummy data
                 if (!stored) {
                     this.saveItems();
                 }
@@ -755,22 +784,7 @@
                     `).join('');
             }
 
-            getDummyData() {
-                return [
-                    {
-                        id: '1',
-                        name: 'Demo item 1',
-                        content: 'This is a sample content for the first item.',
-                        lastModified: new Date().toISOString()
-                    },
-                    {
-                        id: '2',
-                        name: 'Demo item 2', 
-                        content: 'Another example item with different content.',
-                        lastModified: new Date().toISOString()
-                    }
-                ];
-            }
+            // Removed getDummyData() - no longer needed
 
             showStatus(message) {
                 const status = document.getElementById('status');
