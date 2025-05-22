@@ -1,0 +1,821 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>RetroApp 80s</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Courier New', monospace;
+            background: #000000;
+            color: #00ff00;
+            min-height: 100vh;
+            font-size: 14px;
+        }
+
+        .container {
+            max-width: 100vw;
+            min-height: 100vh;
+        }
+
+        .header {
+            background: #000000;
+            border-bottom: 1px solid #00ff00;
+            padding: 10px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+        }
+
+        .header-actions {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .button-group {
+            display: flex;
+            gap: 10px;
+        }
+
+        .status-indicator {
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            text-transform: uppercase;
+        }
+
+        .status-indicator.offline {
+            animation: blink 0.8s infinite;
+        }
+
+        @keyframes blink {
+            0%, 50% { opacity: 1; }
+            51%, 100% { opacity: 0.3; }
+        }
+
+        .btn {
+            background: #000000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            font-size: 12px;
+            cursor: pointer;
+            font-family: 'Courier New', monospace;
+            text-transform: uppercase;
+        }
+
+        .btn:hover {
+            background: #00ff00;
+            color: #000000;
+        }
+
+        .search-container {
+            padding: 10px;
+            border-bottom: 1px solid #00ff00;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #00ff00;
+            background: #000000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            outline: none;
+        }
+
+        .section {
+            display: none;
+        }
+
+        .section.active {
+            display: block;
+        }
+
+        .list-container {
+            padding: 10px;
+        }
+
+        .item {
+            padding: 10px;
+            cursor: pointer;
+            border-bottom: 1px solid #00ff00;
+        }
+
+        .item:hover {
+            background: #003300;
+        }
+
+        .item:last-child {
+            border-bottom: none;
+        }
+
+        .item-name {
+            font-weight: bold;
+        }
+
+        .edit-section {
+            padding: 10px;
+        }
+
+        .form-group {
+            margin-bottom: 10px;
+        }
+
+        .form-label {
+            display: block;
+            margin-bottom: 5px;
+            text-transform: uppercase;
+        }
+
+        .form-input, .form-textarea {
+            width: 100%;
+            padding: 5px;
+            border: 1px solid #00ff00;
+            background: #000000;
+            color: #00ff00;
+            font-family: 'Courier New', monospace;
+            outline: none;
+        }
+
+        .form-textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+
+        .form-actions {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+
+        .form-actions .btn {
+            flex: 1;
+        }
+
+        .status {
+            position: fixed;
+            top: 50px;
+            right: 10px;
+            background: #000000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+        }
+
+        .status.show {
+            opacity: 1;
+        }
+
+        .empty-state {
+            text-align: center;
+            padding: 50px 20px;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 2000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+        }
+
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .modal-content {
+            background: #000000;
+            border: 2px solid #00ff00;
+            padding: 20px;
+            width: 90%;
+            max-width: 400px;
+        }
+
+        .modal h3 {
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        .modal p {
+            font-size: 12px;
+            margin-bottom: 15px;
+            text-align: center;
+        }
+
+        @media (max-width: 480px) {
+            .form-actions {
+                flex-direction: column;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-actions">
+                <div class="button-group">
+                    <button class="btn" id="back-btn" style="display: none;">Back</button>
+                    <button class="btn" id="add-btn">New</button>
+                    <button class="btn btn-primary" id="save-btn" style="display: none;">SAVE</button>
+                    <button class="btn" id="clone-btn" style="display: none;">CLONE</button>
+                    <button class="btn btn-danger" id="delete-btn" style="display: none;">DELETE</button>
+                </div>
+                <span class="status-indicator" id="connection-status">Offline</span>
+            </div>
+        </div>
+
+        <!-- Status Message -->
+        <div class="status" id="status"></div>
+
+        <!-- Configuration Modal -->
+        <div class="modal" id="config-modal">
+            <div class="modal-content">
+                <h3 id="modal-title">CONFIGURATION REQUIRED</h3>
+                <div class="form-group">
+                    <label class="form-label" id="modal-label">JSONBin API Key:</label>
+                    <input type="text" class="form-input" id="config-input" placeholder="">
+                </div>
+                <div style="margin-top: 15px;">
+                    <button class="btn btn-primary" id="save-config" style="width: 100%;">SAVE</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- List Section -->
+        <div class="section active" id="list-section">
+            <div class="search-container">
+                <input type="text" class="search-input" id="search-input" placeholder="SEARCH ITEMS...">
+            </div>
+            <div class="list-container" id="items-list"></div>
+        </div>
+
+        <!-- Edit Section -->
+        <div class="section" id="edit-section">
+            <div class="edit-section">
+                <form id="item-form">
+                    <div class="form-group">
+                        <label class="form-label">NAME</label>
+                        <input type="text" class="form-input" id="item-name" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">CONTENT</label>
+                        <textarea class="form-textarea" id="item-content"></textarea>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class RetroApp {
+            constructor() {
+                this.items = [];
+                this.currentItem = null;
+                this.currentSection = 'list';
+                this.currentConfigType = null; // 'api' or 'binid'
+                
+                this.init();
+            }
+
+            init() {
+                this.loadItems();
+                this.bindEvents();
+                this.renderItems();
+                this.checkConfiguration();
+            }
+
+            bindEvents() {
+                // Navigation
+                document.getElementById('back-btn').addEventListener('click', () => this.showSection('list'));
+                document.getElementById('add-btn').addEventListener('click', () => this.newItem());
+
+                // Search
+                let searchTimeout;
+                document.getElementById('search-input').addEventListener('input', (e) => {
+                    const value = e.target.value.toLowerCase();
+                    
+                    // Clear previous timeout
+                    if (searchTimeout) {
+                        clearTimeout(searchTimeout);
+                    }
+                    
+                    // Check for special commands
+                    if (value === 'token' || value === 'binid') {
+                        // Auto-trigger after 1.5 seconds of no typing
+                        searchTimeout = setTimeout(() => {
+                            if (e.target.value.toLowerCase() === 'token') {
+                                e.target.value = '';
+                                this.editApiKey();
+                            } else if (e.target.value.toLowerCase() === 'binid') {
+                                e.target.value = '';
+                                this.editBinId();
+                            }
+                        }, 1500);
+                    } else {
+                        // Normal search
+                        this.filterItems(e.target.value);
+                    }
+                });
+                
+                // Keep ENTER functionality for desktop users
+                document.getElementById('search-input').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter') {
+                        const value = e.target.value.toLowerCase();
+                        if (value === 'token') {
+                            e.preventDefault();
+                            e.target.value = '';
+                            this.editApiKey();
+                        } else if (value === 'binid') {
+                            e.preventDefault();
+                            e.target.value = '';
+                            this.editBinId();
+                        }
+                    }
+                });
+
+                // Form
+                document.getElementById('item-form').addEventListener('submit', (e) => this.saveItem(e));
+                document.getElementById('save-btn').addEventListener('click', (e) => this.saveItem(e));
+                document.getElementById('clone-btn').addEventListener('click', () => this.cloneItem());
+                document.getElementById('delete-btn').addEventListener('click', () => this.deleteItem());
+
+                // Configuration modal
+                document.getElementById('save-config').addEventListener('click', () => this.saveConfiguration());
+
+                // Prevent zoom on input focus (iOS)
+                const inputs = document.querySelectorAll('input, textarea');
+                inputs.forEach(input => {
+                    input.addEventListener('focus', () => {
+                        document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=0');
+                    });
+                    input.addEventListener('blur', () => {
+                        document.querySelector('meta[name=viewport]').setAttribute('content', 'width=device-width, initial-scale=1.0, user-scalable=no');
+                    });
+                });
+            }
+
+            checkConfiguration() {
+                const apiKey = this.getApiKey();
+                const binId = this.getBinId();
+                
+                if (!apiKey) {
+                    this.showConfigModal('api');
+                } else if (!binId) {
+                    this.showConfigModal('binid');
+                } else {
+                    // Both configured, try to sync
+                    this.autoSync();
+                }
+            }
+
+            showConfigModal(type) {
+                this.currentConfigType = type;
+                const modal = document.getElementById('config-modal');
+                const title = document.getElementById('modal-title');
+                const label = document.getElementById('modal-label');
+                const input = document.getElementById('config-input');
+                
+                if (type === 'api') {
+                    title.textContent = 'API KEY REQUIRED';
+                    label.textContent = 'JSONBin API Key:';
+                    input.placeholder = '$2a$10...';
+                    input.value = this.getApiKey() || '';
+                } else if (type === 'binid') {
+                    title.textContent = 'BIN ID REQUIRED';
+                    label.textContent = 'JSONBin Bin ID:';
+                    input.placeholder = '682ef4c18960c979a59f1a06';
+                    input.value = this.getBinId() || '';
+                }
+                
+                modal.classList.add('show');
+            }
+
+            editApiKey() {
+                this.showConfigModal('api');
+            }
+
+            editBinId() {
+                this.showConfigModal('binid');
+            }
+
+            getApiKey() {
+                return localStorage.getItem('jsonbin_api_key');
+            }
+
+            getBinId() {
+                return localStorage.getItem('jsonbin_bin_id');
+            }
+
+            saveConfiguration() {
+                const input = document.getElementById('config-input');
+                const value = input.value.trim();
+                
+                if (!value) {
+                    this.showStatus('Invalid value');
+                    return;
+                }
+
+                if (this.currentConfigType === 'api') {
+                    localStorage.setItem('jsonbin_api_key', value);
+                    this.showStatus('API key saved');
+                } else if (this.currentConfigType === 'binid') {
+                    localStorage.setItem('jsonbin_bin_id', value);
+                    this.showStatus('Bin ID saved');
+                }
+                
+                document.getElementById('config-modal').classList.remove('show');
+                
+                // Check if we need to ask for the other configuration
+                setTimeout(() => {
+                    this.checkConfiguration();
+                }, 1000);
+            }
+
+            setConnectionStatus(isOnline) {
+                const statusElement = document.getElementById('connection-status');
+                if (isOnline) {
+                    statusElement.textContent = 'Online';
+                    statusElement.className = 'status-indicator';
+                } else {
+                    statusElement.textContent = 'Offline';
+                    statusElement.className = 'status-indicator offline';
+                }
+            }
+
+            showSection(section) {
+                const sections = document.querySelectorAll('.section');
+                sections.forEach(s => s.classList.remove('active'));
+                
+                document.getElementById(`${section}-section`).classList.add('active');
+                
+                const backBtn = document.getElementById('back-btn');
+                const addBtn = document.getElementById('add-btn');
+                const saveBtn = document.getElementById('save-btn');
+                const cloneBtn = document.getElementById('clone-btn');
+                const deleteBtn = document.getElementById('delete-btn');
+                
+                if (section === 'list') {
+                    // List view - show only NEW button
+                    backBtn.style.display = 'none';
+                    addBtn.style.display = 'block';
+                    saveBtn.style.display = 'none';
+                    cloneBtn.style.display = 'none';
+                    deleteBtn.style.display = 'none';
+                } else {
+                    // Edit view - show action buttons, hide NEW
+                    backBtn.style.display = 'block';
+                    addBtn.style.display = 'none';
+                    saveBtn.style.display = 'block';
+                    
+                    // Show CLONE and DELETE only when editing existing item
+                    if (this.currentItem) {
+                        cloneBtn.style.display = 'block';
+                        deleteBtn.style.display = 'block';
+                    } else {
+                        cloneBtn.style.display = 'none';
+                        deleteBtn.style.display = 'none';
+                    }
+                }
+                
+                this.currentSection = section;
+            }
+
+            async autoSync() {
+                const apiKey = this.getApiKey();
+                const binId = this.getBinId();
+                
+                if (!apiKey || !binId) {
+                    this.setConnectionStatus(false);
+                    return;
+                }
+
+                try {
+                    // Verificar conexión
+                    const testResponse = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Master-Key': apiKey
+                        }
+                    });
+
+                    if (testResponse.ok) {
+                        this.setConnectionStatus(true);
+                        // Cargar datos de la nube y hacer merge
+                        await this.syncFromCloud();
+                    } else {
+                        this.setConnectionStatus(false);
+                    }
+                } catch (error) {
+                    console.error('Auto sync error:', error);
+                    this.setConnectionStatus(false);
+                }
+            }
+
+            async syncFromCloud() {
+                const apiKey = this.getApiKey();
+                const binId = this.getBinId();
+                
+                if (!apiKey || !binId) return;
+
+                try {
+                    // Descargar datos de la nube
+                    const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
+                        method: 'GET',
+                        headers: {
+                            'X-Master-Key': apiKey
+                        }
+                    });
+
+                    if (response.ok) {
+                        const data = await response.json();
+                        const cloudItems = data.record || [];
+                        
+                        // Hacer merge de datos locales y de la nube
+                        const mergedItems = this.mergeItems(this.items, cloudItems);
+                        
+                        if (JSON.stringify(mergedItems) !== JSON.stringify(this.items)) {
+                            this.items = mergedItems;
+                            this.saveItems();
+                            this.renderItems();
+                            console.log('Data merged from cloud');
+                        }
+                        
+                        // Subir datos actualizados si hay cambios
+                        await this.syncToCloud();
+                    }
+                } catch (error) {
+                    console.error('Sync from cloud error:', error);
+                }
+            }
+
+            mergeItems(localItems, cloudItems) {
+                const itemsMap = new Map();
+                
+                // Agregar items locales
+                localItems.forEach(item => {
+                    itemsMap.set(item.id, item);
+                });
+                
+                // Agregar/actualizar con items de la nube (si son más recientes)
+                cloudItems.forEach(cloudItem => {
+                    const localItem = itemsMap.get(cloudItem.id);
+                    if (!localItem) {
+                        // Item solo existe en la nube
+                        itemsMap.set(cloudItem.id, cloudItem);
+                    } else {
+                        // Comparar timestamps y mantener el más reciente
+                        const localTime = new Date(localItem.lastModified).getTime();
+                        const cloudTime = new Date(cloudItem.lastModified).getTime();
+                        
+                        if (cloudTime > localTime) {
+                            itemsMap.set(cloudItem.id, cloudItem);
+                        }
+                    }
+                });
+                
+                return Array.from(itemsMap.values());
+            }
+
+            async syncToCloud() {
+                const apiKey = this.getApiKey();
+                const binId = this.getBinId();
+                
+                if (!apiKey || !binId) return;
+
+                try {
+                    const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}`, {
+                        method: 'PUT',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Master-Key': apiKey
+                        },
+                        body: JSON.stringify(this.items)
+                    });
+
+                    if (response.ok) {
+                        console.log('Synced to cloud successfully');
+                        this.setConnectionStatus(true);
+                    } else {
+                        this.setConnectionStatus(false);
+                    }
+                } catch (error) {
+                    console.error('Sync to cloud error:', error);
+                    this.setConnectionStatus(false);
+                }
+            }
+
+            newItem() {
+                this.currentItem = null;
+                this.clearForm();
+                this.showSection('edit');
+            }
+
+            editItem(item) {
+                this.currentItem = item;
+                this.populateForm(item);
+                this.showSection('edit');
+            }
+
+            cloneItem() {
+                // Get current form data
+                const itemData = {
+                    id: Date.now().toString(), // New unique ID
+                    name: document.getElementById('item-name').value + ' (Copy)',
+                    content: document.getElementById('item-content').value,
+                    lastModified: new Date().toISOString()
+                };
+
+                // Add cloned item to the list
+                this.items.push(itemData);
+                this.saveItems();
+                this.renderItems();
+                this.showStatus('Item cloned');
+                this.showSection('list');
+                
+                // Sync to cloud
+                setTimeout(() => this.syncToCloud(), 500);
+            }
+
+            clearForm() {
+                document.getElementById('item-name').value = '';
+                document.getElementById('item-content').value = '';
+            }
+
+            populateForm(item) {
+                document.getElementById('item-name').value = item.name || '';
+                document.getElementById('item-content').value = item.content || '';
+            }
+
+            saveItem(e) {
+                e.preventDefault();
+                
+                const itemData = {
+                    id: this.currentItem ? this.currentItem.id : Date.now().toString(),
+                    name: document.getElementById('item-name').value,
+                    content: document.getElementById('item-content').value,
+                    lastModified: new Date().toISOString()
+                };
+
+                if (this.currentItem) {
+                    // Update existing item
+                    const index = this.items.findIndex(i => i.id === this.currentItem.id);
+                    this.items[index] = itemData;
+                } else {
+                    // Add new item
+                    this.items.push(itemData);
+                }
+
+                this.saveItems();
+                this.renderItems();
+                this.showStatus('Item saved');
+                this.showSection('list');
+                
+                // Sincronizar automáticamente después de guardar
+                setTimeout(() => this.syncToCloud(), 500);
+            }
+
+            deleteItem() {
+                if (this.currentItem && confirm('Delete this item?')) {
+                    this.items = this.items.filter(i => i.id !== this.currentItem.id);
+                    this.saveItems();
+                    this.renderItems();
+                    this.showStatus('Item deleted');
+                    this.showSection('list');
+                    
+                    // Sincronizar automáticamente después de eliminar
+                    setTimeout(() => this.syncToCloud(), 500);
+                }
+            }
+
+            filterItems(query) {
+                const filtered = this.items.filter(item => 
+                    item.name.toLowerCase().includes(query.toLowerCase()) ||
+                    (item.content && item.content.toLowerCase().includes(query.toLowerCase()))
+                );
+                this.renderItemsList(filtered);
+            }
+
+            renderItems() {
+                this.renderItemsList(this.items);
+            }
+
+            loadItems() {
+                const stored = localStorage.getItem('retro_items');
+                this.items = stored ? JSON.parse(stored) : this.getDummyData();
+                if (!stored) {
+                    this.saveItems();
+                }
+            }
+
+            saveItems() {
+                localStorage.setItem('retro_items', JSON.stringify(this.items));
+            }
+
+            renderItemsList(items) {
+                const container = document.getElementById('items-list');
+                
+                if (items.length === 0) {
+                    container.innerHTML = `
+                        <div class="empty-state">
+                            <h3>No items found</h3>
+                            <p>Press "New" to create your first item</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                container.innerHTML = items
+                    .sort((a, b) => a.name.localeCompare(b.name))
+                    .map(item => `
+                        <div class="item" onclick="app.editItem(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                            <div class="item-name">${item.name}</div>
+                        </div>
+                    `).join('');
+            }
+
+            getDummyData() {
+                return [
+                    {
+                        id: '1',
+                        name: 'Demo item 1',
+                        content: 'This is a sample content for the first item.',
+                        lastModified: new Date().toISOString()
+                    },
+                    {
+                        id: '2',
+                        name: 'Demo item 2', 
+                        content: 'Another example item with different content.',
+                        lastModified: new Date().toISOString()
+                    }
+                ];
+            }
+
+            showStatus(message) {
+                const status = document.getElementById('status');
+                status.textContent = message;
+                status.classList.add('show');
+                
+                setTimeout(() => {
+                    status.classList.remove('show');
+                }, 3000);
+            }
+        }
+
+        // Initialize app
+        const app = new RetroApp();
+
+        // PWA Support
+        if ('serviceWorker' in navigator) {
+            window.addEventListener('load', () => {
+                const swScript = `
+                    const CACHE_NAME = 'retro-app-v1';
+                    const urlsToCache = ['/'];
+                    
+                    self.addEventListener('install', (event) => {
+                        event.waitUntil(
+                            caches.open(CACHE_NAME)
+                                .then((cache) => cache.addAll(urlsToCache))
+                        );
+                    });
+                    
+                    self.addEventListener('fetch', (event) => {
+                        event.respondWith(
+                            caches.match(event.request)
+                                .then((response) => response || fetch(event.request))
+                        );
+                    });
+                `;
+                
+                const blob = new Blob([swScript], { type: 'application/javascript' });
+                const swUrl = URL.createObjectURL(blob);
+                
+                navigator.serviceWorker.register(swUrl)
+                    .then(() => console.log('SW registered'))
+                    .catch(() => console.log('SW registration failed'));
+            });
+        }
+    </script>
+</body>
+</html>
