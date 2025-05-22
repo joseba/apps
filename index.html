@@ -165,7 +165,23 @@
         }
 
         .status {
-            display: none; /* Hide the separate status box */
+            position: fixed;
+            top: 50px;
+            right: 10px;
+            background: #000000;
+            color: #00ff00;
+            border: 1px solid #00ff00;
+            padding: 5px 10px;
+            z-index: 1000;
+            opacity: 0;
+            transition: opacity 0.3s;
+            font-size: 12px;
+            display: none;
+        }
+
+        .status.show {
+            display: block;
+            opacity: 1;
         }
 
         .empty-state {
@@ -228,7 +244,7 @@
                     <button class="btn" id="clone-btn" style="display: none;">CLONE</button>
                     <button class="btn btn-danger" id="delete-btn" style="display: none;">DELETE</button>
                 </div>
-                <span class="status-indicator" id="connection-status">Offline</span>
+                <span class="status-indicator" id="connection-status">OFFLINE</span>
             </div>
         </div>
 
@@ -280,10 +296,10 @@
                 this.items = [];
                 this.currentItem = null;
                 this.currentSection = 'list';
-                this.currentConfigType = null; // 'api' or 'binid'
-                this.syncTimer = null; // Timer for auto-sync
-                this.statusTimer = null; // Timer for status messages
-                this.currentConnectionStatus = 'offline'; // Track current connection status
+                this.currentConfigType = null;
+                this.syncTimer = null;
+                this.statusTimer = null;
+                this.currentConnectionStatus = 'offline';
                 
                 this.init();
             }
@@ -305,14 +321,11 @@
                 document.getElementById('search-input').addEventListener('input', (e) => {
                     const value = e.target.value.toLowerCase();
                     
-                    // Clear previous timeout
                     if (searchTimeout) {
                         clearTimeout(searchTimeout);
                     }
                     
-                    // Check for special commands
                     if (value === 'token' || value === 'binid') {
-                        // Auto-trigger after 1.5 seconds of no typing
                         searchTimeout = setTimeout(() => {
                             if (e.target.value.toLowerCase() === 'token') {
                                 e.target.value = '';
@@ -323,12 +336,10 @@
                             }
                         }, 1500);
                     } else {
-                        // Normal search
                         this.filterItems(e.target.value);
                     }
                 });
                 
-                // Keep ENTER functionality for desktop users
                 document.getElementById('search-input').addEventListener('keypress', (e) => {
                     if (e.key === 'Enter') {
                         const value = e.target.value.toLowerCase();
@@ -374,7 +385,6 @@
                 } else if (!binId) {
                     this.showConfigModal('binid');
                 } else {
-                    // Both configured, try to sync
                     this.autoSync();
                 }
             }
@@ -422,21 +432,20 @@
                 const value = input.value.trim();
                 
                 if (!value) {
-                    this.showStatus('Invalid value');
+                    this.showStatus('INVALID VALUE');
                     return;
                 }
 
                 if (this.currentConfigType === 'api') {
                     localStorage.setItem('jsonbin_api_key', value);
-                    this.showStatus('API key saved');
+                    this.showStatus('API KEY SAVED');
                 } else if (this.currentConfigType === 'binid') {
                     localStorage.setItem('jsonbin_bin_id', value);
-                    this.showStatus('Bin ID saved');
+                    this.showStatus('BIN ID SAVED');
                 }
                 
                 document.getElementById('config-modal').classList.remove('show');
                 
-                // Check if we need to ask for the other configuration
                 setTimeout(() => {
                     this.checkConfiguration();
                 }, 1000);
@@ -466,22 +475,18 @@
                 const deleteBtn = document.getElementById('delete-btn');
                 
                 if (section === 'list') {
-                    // List view - show only NEW button
                     backBtn.style.display = 'none';
                     addBtn.style.display = 'block';
                     saveBtn.style.display = 'none';
                     cloneBtn.style.display = 'none';
                     deleteBtn.style.display = 'none';
                     
-                    // Start auto-sync timer for list view
                     this.startAutoSync();
                 } else {
-                    // Edit view - show action buttons, hide NEW
                     backBtn.style.display = 'block';
                     addBtn.style.display = 'none';
                     saveBtn.style.display = 'block';
                     
-                    // Show CLONE and DELETE only when editing existing item
                     if (this.currentItem) {
                         cloneBtn.style.display = 'block';
                         deleteBtn.style.display = 'block';
@@ -490,7 +495,6 @@
                         deleteBtn.style.display = 'none';
                     }
                     
-                    // Stop auto-sync timer when not in list view
                     this.stopAutoSync();
                 }
                 
@@ -498,18 +502,15 @@
             }
 
             startAutoSync() {
-                // Clear existing timer
                 this.stopAutoSync();
                 
-                // Start new timer - sync every 10 seconds
                 this.syncTimer = setInterval(() => {
                     if (this.currentSection === 'list') {
                         this.autoSync();
                     } else {
-                        // Stop timer if not in list anymore
                         this.stopAutoSync();
                     }
-                }, 10000); // 10 seconds
+                }, 10000);
             }
 
             stopAutoSync() {
@@ -529,7 +530,6 @@
                 }
 
                 try {
-                    // Verificar conexión
                     const testResponse = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
                         method: 'GET',
                         headers: {
@@ -539,7 +539,6 @@
 
                     if (testResponse.ok) {
                         this.setConnectionStatus(true);
-                        // Cargar datos de la nube y hacer merge
                         await this.syncFromCloud();
                     } else {
                         this.setConnectionStatus(false);
@@ -557,7 +556,6 @@
                 if (!apiKey || !binId) return;
 
                 try {
-                    // Descargar datos de la nube
                     const response = await fetch(`https://api.jsonbin.io/v3/b/${binId}/latest`, {
                         method: 'GET',
                         headers: {
@@ -569,7 +567,6 @@
                         const data = await response.json();
                         const cloudItems = data.record || [];
                         
-                        // Hacer merge de datos locales y de la nube
                         const mergedItems = this.mergeItems(this.items, cloudItems);
                         
                         if (JSON.stringify(mergedItems) !== JSON.stringify(this.items)) {
@@ -579,40 +576,53 @@
                             console.log('Data merged from cloud');
                         }
                         
-                        // Subir datos actualizados si hay cambios
                         await this.syncToCloud();
+                    } else {
+                        console.error('Sync from cloud error: Fetch failed', response.status);
+                        this.setConnectionStatus(false);
                     }
                 } catch (error) {
                     console.error('Sync from cloud error:', error);
+                    this.setConnectionStatus(false);
                 }
             }
 
+            // FIXED: Improved merge logic with soft delete support
             mergeItems(localItems, cloudItems) {
                 const itemsMap = new Map();
                 
-                // Agregar items locales
+                // Add local items (including deleted ones)
                 localItems.forEach(item => {
                     itemsMap.set(item.id, item);
                 });
                 
-                // Agregar/actualizar con items de la nube (si son más recientes)
+                // Process cloud items
                 cloudItems.forEach(cloudItem => {
                     const localItem = itemsMap.get(cloudItem.id);
+                    
                     if (!localItem) {
-                        // Item solo existe en la nube
-                        itemsMap.set(cloudItem.id, cloudItem);
+                        // Item only exists in cloud - add it (unless it's marked as deleted)
+                        if (!cloudItem.deleted) {
+                            itemsMap.set(cloudItem.id, cloudItem);
+                        }
                     } else {
-                        // Comparar timestamps y mantener el más reciente
-                        const localTime = new Date(localItem.lastModified).getTime();
-                        const cloudTime = new Date(cloudItem.lastModified).getTime();
+                        // Compare timestamps and keep the most recent version
+                        const localTime = new Date(localItem.lastModified || 0).getTime();
+                        const cloudTime = new Date(cloudItem.lastModified || 0).getTime();
                         
                         if (cloudTime > localTime) {
                             itemsMap.set(cloudItem.id, cloudItem);
                         }
+                        // If local is newer or equal, keep local version (already in map)
                     }
                 });
                 
                 return Array.from(itemsMap.values());
+            }
+
+            // FIXED: Filter out deleted items from display
+            getActiveItems() {
+                return this.items.filter(item => !item.deleted);
             }
 
             async syncToCloud() {
@@ -628,7 +638,7 @@
                             'Content-Type': 'application/json',
                             'X-Master-Key': apiKey
                         },
-                        body: JSON.stringify(this.items)
+                        body: JSON.stringify(this.items) // Sync all items including deleted ones
                     });
 
                     if (response.ok) {
@@ -656,22 +666,20 @@
             }
 
             cloneItem() {
-                // Get current form data
                 const itemData = {
-                    id: Date.now().toString(), // New unique ID
+                    id: Date.now().toString(),
                     name: document.getElementById('item-name').value + ' (Copy)',
                     content: document.getElementById('item-content').value,
-                    lastModified: new Date().toISOString()
+                    lastModified: new Date().toISOString(),
+                    deleted: false // Explicitly mark as not deleted
                 };
 
-                // Add cloned item to the list
                 this.items.push(itemData);
                 this.saveItems();
                 this.renderItems();
                 this.showStatus('Item cloned');
                 this.showSection('list');
                 
-                // Sync to cloud
                 setTimeout(() => this.syncToCloud(), 500);
             }
 
@@ -692,42 +700,50 @@
                     id: this.currentItem ? this.currentItem.id : Date.now().toString(),
                     name: document.getElementById('item-name').value,
                     content: document.getElementById('item-content').value,
-                    lastModified: new Date().toISOString()
+                    lastModified: new Date().toISOString(),
+                    deleted: false // Explicitly mark as not deleted
                 };
 
                 if (this.currentItem) {
-                    // Update existing item
                     const index = this.items.findIndex(i => i.id === this.currentItem.id);
                     this.items[index] = itemData;
                 } else {
-                    // Add new item
                     this.items.push(itemData);
                 }
 
                 this.saveItems();
                 this.renderItems();
-                this.showStatus('Item saved');
+                this.showStatus('ITEM SAVED');
                 this.showSection('list');
                 
-                // Sincronizar automáticamente después de guardar
                 setTimeout(() => this.syncToCloud(), 500);
             }
 
+            // FIXED: Use soft delete instead of hard delete
             deleteItem() {
                 if (this.currentItem && confirm('Delete this item?')) {
-                    this.items = this.items.filter(i => i.id !== this.currentItem.id);
-                    this.saveItems();
-                    this.renderItems();
-                    this.showStatus('Item deleted');
-                    this.showSection('list');
-                    
-                    // Sincronizar automáticamente después de eliminar
-                    setTimeout(() => this.syncToCloud(), 500);
+                    const index = this.items.findIndex(i => i.id === this.currentItem.id);
+                    if (index !== -1) {
+                        // Soft delete: mark as deleted instead of removing from array
+                        this.items[index] = {
+                            ...this.items[index],
+                            deleted: true,
+                            lastModified: new Date().toISOString()
+                        };
+                        
+                        this.saveItems();
+                        this.renderItems();
+                        this.showStatus('Item deleted');
+                        this.showSection('list');
+                        
+                        setTimeout(() => this.syncToCloud(), 500);
+                    }
                 }
             }
 
             filterItems(query) {
-                const filtered = this.items.filter(item => 
+                const activeItems = this.getActiveItems();
+                const filtered = activeItems.filter(item => 
                     item.name.toLowerCase().includes(query.toLowerCase()) ||
                     (item.content && item.content.toLowerCase().includes(query.toLowerCase()))
                 );
@@ -735,12 +751,20 @@
             }
 
             renderItems() {
-                this.renderItemsList(this.items);
+                const activeItems = this.getActiveItems();
+                this.renderItemsList(activeItems);
             }
 
             loadItems() {
                 const stored = localStorage.getItem('retro_items');
-                this.items = stored ? JSON.parse(stored) : []; // Start with empty array instead of dummy data
+                this.items = stored ? JSON.parse(stored) : [];
+                
+                // Clean up old format items that don't have deleted flag
+                this.items = this.items.map(item => ({
+                    ...item,
+                    deleted: item.deleted || false
+                }));
+                
                 if (!stored) {
                     this.saveItems();
                 }
@@ -766,13 +790,11 @@
                 container.innerHTML = items
                     .sort((a, b) => a.name.localeCompare(b.name))
                     .map(item => `
-                        <div class="item" onclick="app.editItem(${JSON.stringify(item).replace(/"/g, '&quot;')})">
+                        <div class="item" onclick="app.editItem(${JSON.stringify(item).replace(/"/g, '"')})">
                             <div class="item-name">${item.name}</div>
                         </div>
                     `).join('');
             }
-
-            // Removed getDummyData() - no longer needed
 
             showStatus(message) {
                 const status = document.getElementById('status');
